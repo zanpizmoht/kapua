@@ -33,6 +33,7 @@ import org.eclipse.kapua.qa.common.TestBase;
 import org.eclipse.kapua.qa.common.TestJAXBContextProvider;
 import org.eclipse.kapua.qa.common.cucumber.CucConfig;
 import org.eclipse.kapua.service.account.Account;
+import org.eclipse.kapua.service.device.registry.Device;
 import org.eclipse.kapua.service.tag.Tag;
 import org.eclipse.kapua.service.tag.TagAttributes;
 import org.eclipse.kapua.service.tag.TagCreator;
@@ -43,11 +44,11 @@ import org.eclipse.kapua.service.tag.TagService;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Implementation of Gherkin steps used in TagService.feature scenarios.
@@ -78,15 +79,12 @@ public class TagServiceSteps extends TestBase {
 
     @Before
     public void beforeScenario(Scenario scenario) {
-
         this.scenario = scenario;
         database.setup();
         stepData.clear();
-
         locator = KapuaLocator.getInstance();
         tagService = locator.getService(TagService.class);
         tagFactory = locator.getFactory(TagFactory.class);
-
         if (isUnitTest()) {
             // Create KapuaSession using KapuaSecurtiyUtils and kapua-sys user as logged in user.
             // All operations on database are performed using system user.
@@ -94,7 +92,6 @@ public class TagServiceSteps extends TestBase {
             KapuaSession kapuaSession = new KapuaSession(null, SYS_SCOPE_ID, SYS_USER_ID);
             KapuaSecurityUtils.setSession(kapuaSession);
         }
-
         // Setup JAXB context
         XmlUtil.setContextProvider(new TestJAXBContextProvider());
     }
@@ -142,13 +139,29 @@ public class TagServiceSteps extends TestBase {
         }
     }
 
-    @Given("^Tag with name \"([^\"]*)\"$")
-    public void tagWithName(String tagName) throws Throwable {
+    @Given("^I create tag with name \"([^\"]*)\" without description$")
+    public void tagWithNameIsCreatedWithoutDescription(String tagName) throws Exception {
+        try {
+            TagCreator tagCreator = tagCreatorCreatorWithoutDescription(tagName);
+            stepData.remove("tag");
+            Tag tag = tagService.create(tagCreator);
+            stepData.put("tag", tag);
+        } catch (Exception e) {
+            verifyException(e);
+        }
+    }
 
-        TagCreator tagCreator = tagCreatorCreator(tagName);
-        stepData.remove("tag");
-        Tag tag = tagService.create(tagCreator);
-        stepData.put("tag", tag);
+    @When("^I create tag with name \"([^\"]*)\" and description \"([^\"]*)\"$")
+    public void tagWithNameIsCreatedWithDescription(String tagName, String tagDescription) throws Exception {
+
+        try {
+            TagCreator tagCreator = tagCreatorCreatorWithDescription(tagName, tagDescription);
+            stepData.remove("tag");
+            Tag tag = tagService.create(tagCreator);
+            stepData.put("tag", tag);
+        } catch (Exception e) {
+            verifyException(e);
+        }
     }
 
     @When("^Tag with name \"([^\"]*)\" is searched$")
@@ -164,7 +177,6 @@ public class TagServiceSteps extends TestBase {
         } catch (KapuaException ke) {
             verifyException(ke);
         }
-
     }
 
     @Then("^Tag with name \"([^\"]*)\" is found$")
@@ -182,13 +194,16 @@ public class TagServiceSteps extends TestBase {
 
     @Then("^Tag with name \"([^\"]*)\" is found and deleted$")
     public void tagWithNameIsDeleted(String tagName) throws Throwable {
-
-        Tag foundTag = (Tag) stepData.get("tag");
-        TagListResult queryResult = (TagListResult) stepData.get("queryResult");
-        tagService.delete(foundTag.getScopeId(), foundTag.getId());
-        queryResult.clearItems();
-        foundTag = queryResult.getFirstItem();
-        Assert.assertEquals(null,foundTag);
+        try {
+            Tag foundTag = (Tag) stepData.get("tag");
+            TagListResult queryResult = (TagListResult) stepData.get("queryResult");
+            tagService.delete(foundTag.getScopeId(), foundTag.getId());
+            queryResult.clearItems();
+            foundTag = queryResult.getFirstItem();
+            Assert.assertEquals(null, foundTag);
+        } catch (Exception e) {
+            verifyException(e);
+        }
     }
 
     /**
@@ -197,7 +212,7 @@ public class TagServiceSteps extends TestBase {
      * @param tagName name of tag
      * @return tag creator for tag with specified name
      */
-    private TagCreator tagCreatorCreator(String tagName) {
+    private TagCreator tagCreatorCreatorWithoutDescription(String tagName) {
 
         TagCreator tagCreator = tagFactory.newCreator(SYS_SCOPE_ID);
         tagCreator.setName(tagName);
@@ -205,29 +220,100 @@ public class TagServiceSteps extends TestBase {
         return tagCreator;
     }
 
+    private TagCreator tagCreatorCreatorWithDescription(String tagName, String tagDescription) {
+
+        TagCreator tagCreator = tagFactory.newCreator(SYS_SCOPE_ID);
+        tagCreator.setName(tagName);
+        tagCreator.setDescription(tagDescription);
+        return tagCreator;
+    }
+
     @And("^Tag name is changed into name \"([^\"]*)\"$")
     public void tagNameIsChangedIntoName(String tagName) throws Exception {
-       Tag tag = (Tag) stepData.get("tag");
-       tag.setName(tagName);
+        Tag tag = (Tag) stepData.get("tag");
+        tag.setName(tagName);
+        try {
+            primeException();
+            stepData.remove("tag");
+            Tag newtag = tagService.update(tag);
+            stepData.put("tag", newtag);
+        } catch (KapuaException ex) {
+            verifyException(ex);
+        }
+    }
 
-       try {
-           primeException();
-           stepData.remove("tag");
-           Tag newtag = tagService.update(tag);
-           stepData.put("tag", newtag);
-       } catch (KapuaException ex) {
-           verifyException(ex);
-       }
+    @And("^Tag description is changed into \"([^\"]*)\"$")
+    public void tagDescriptionIsChangedInto(String description) throws Exception {
+        Tag tag = (Tag) stepData.get("tag");
+        try {
+            tag.setDescription(description);
+            primeException();
+            stepData.remove("tag");
+            Tag newtag = tagService.update(tag);
+            stepData.put("tag", newtag);
+        } catch (Exception ex) {
+            verifyException(ex);
+        }
     }
 
     @And("^Tag is deleted$")
     public void tagIsDeleted() throws Exception {
         Tag tag = (Tag) stepData.get("tag");
-
         try {
             tagService.delete(getCurrentScopeId(), tag.getId());
         } catch (KapuaException ex) {
             verifyException(ex);
+        }
+    }
+
+    @And("^I asign tag to device$")
+    public void iAsignTagToDevice() throws Exception {
+        Tag tag = (Tag) stepData.get("tag");
+        Device device = (Device) stepData.get("Device");
+        try {
+            Set<KapuaId> tags = device.getTagIds();
+            tags.add(tag.getId());
+            device.setTagIds(tags);
+            stepData.put("tags", tags);
+            stepData.put("Device", device);
+        } catch (Exception e) {
+            verifyException(e);
+        }
+    }
+
+    @Given("^Tag is assigned to device$")
+    public void tagIsAsignedToDevice() throws Throwable {
+        Tag tag = (Tag) stepData.get("tag");
+        Device device = (Device) stepData.get("Device");
+        try {
+            Set<KapuaId> tagIds = device.getTagIds();
+            assertTrue(tagIds.contains(tag.getId()));
+        } catch (Exception e) {
+            verifyException(e);
+        }
+    }
+
+    @Given("^I create (\\d+) tags without description and asign them to device$")
+    public void iCreateTagsWithoutDescriptionAndAsignThemToDevice(int numOfTags) throws Exception {
+        try {
+            for (int i = 0; i < numOfTags; i++) {
+                tagWithNameIsCreatedWithoutDescription(String.format("Tag%03d", i));
+                iAsignTagToDevice();
+            }
+        } catch (Exception e) {
+            verifyException(e);
+        }
+    }
+
+    @Given("^I unassign tag from device$")
+    public void iUnassignTagFromDevice() throws Exception {
+        Tag tag = (Tag) stepData.get("tag");
+        Device device = (Device) stepData.get("Device");
+        try {
+            device.getTagIds().remove(tag.getId());
+            stepData.put("Device", device);
+        } catch (Exception e) {
+            verifyException(e);
         }
     }
 }
