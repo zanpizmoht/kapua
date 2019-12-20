@@ -2559,4 +2559,35 @@ public class DeviceRegistrySteps extends TestBase {
 
         assertEquals(device.getClientId(), deviceName);
     }
+
+    @And("^I asign tag to device$")
+    public void iAsignTagToDevice() throws Exception {
+        Tag tag = (Tag) stepData.get("tag");
+        Device device = (Device) stepData.get("Device");
+        try {
+            Set<KapuaId> tags = device.getTagIds();
+            tags.add(tag.getId());
+            device.setTagIds(tags);
+            Device newDevice = deviceRegistryService.update(device);
+            stepData.put("tags", tags);
+            stepData.put("Device", newDevice);
+        } catch (Exception e) {
+            verifyException(e);
+        }
+    }
+
+    @Given("^I unassign tag from device$")
+    public void iUnassignTagFromDevice() throws Exception {
+        Tag tag = (Tag) stepData.get("tag");
+        Device device = (Device) stepData.get("Device");
+        try {
+            Set<KapuaId> tagIds = device.getTagIds();
+            tagIds.remove(tag.getId());
+            device.setTagIds(tagIds);
+            Device newDevice = deviceRegistryService.update(device);
+            stepData.put("Device", newDevice);
+        } catch (Exception e) {
+            verifyException(e);
+        }
+    }
 }

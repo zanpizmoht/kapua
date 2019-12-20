@@ -220,7 +220,7 @@ public class TagServiceSteps extends TestBase {
         return tagCreator;
     }
 
-    private TagCreator tagCreatorCreatorWithDescription(String tagName, String tagDescription) {
+    public TagCreator tagCreatorCreatorWithDescription(String tagName, String tagDescription) {
 
         TagCreator tagCreator = tagFactory.newCreator(SYS_SCOPE_ID);
         tagCreator.setName(tagName);
@@ -266,21 +266,6 @@ public class TagServiceSteps extends TestBase {
         }
     }
 
-    @And("^I asign tag to device$")
-    public void iAsignTagToDevice() throws Exception {
-        Tag tag = (Tag) stepData.get("tag");
-        Device device = (Device) stepData.get("Device");
-        try {
-            Set<KapuaId> tags = device.getTagIds();
-            tags.add(tag.getId());
-            device.setTagIds(tags);
-            stepData.put("tags", tags);
-            stepData.put("Device", device);
-        } catch (Exception e) {
-            verifyException(e);
-        }
-    }
-
     @Given("^Tag is assigned to device$")
     public void tagIsAsignedToDevice() throws Throwable {
         Tag tag = (Tag) stepData.get("tag");
@@ -293,25 +278,13 @@ public class TagServiceSteps extends TestBase {
         }
     }
 
-    @Given("^I create (\\d+) tags without description and asign them to device$")
-    public void iCreateTagsWithoutDescriptionAndAsignThemToDevice(int numOfTags) throws Exception {
-        try {
-            for (int i = 0; i < numOfTags; i++) {
-                tagWithNameIsCreatedWithoutDescription(String.format("Tag%03d", i));
-                iAsignTagToDevice();
-            }
-        } catch (Exception e) {
-            verifyException(e);
-        }
-    }
-
-    @Given("^I unassign tag from device$")
-    public void iUnassignTagFromDevice() throws Exception {
+    @Given("^Tag is not assigned to device$")
+    public void tagIsNotAsignedToDevice() throws Throwable {
         Tag tag = (Tag) stepData.get("tag");
         Device device = (Device) stepData.get("Device");
         try {
-            device.getTagIds().remove(tag.getId());
-            stepData.put("Device", device);
+            Set<KapuaId> tagIds = device.getTagIds();
+            assertFalse(tagIds.contains(tag.getId()));
         } catch (Exception e) {
             verifyException(e);
         }

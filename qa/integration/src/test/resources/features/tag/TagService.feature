@@ -17,14 +17,14 @@ Feature: Tag Service
   used to attach tags to Devices, but could be used to tag eny kapua entity, like
   User for example.
 
-  Scenario: Start event broker for all scenarios
-    Given Start Event Broker
-
-  Scenario: Start datastore for all scenarios
-    Given Start Datastore
-
-  Scenario: Start broker for all scenarios
-    Given Start Broker
+#  Scenario: Start event broker for all scenarios
+#    Given Start Event Broker
+#
+#  Scenario: Start datastore for all scenarios
+#    Given Start Datastore
+#
+#  Scenario: Start broker for all scenarios
+#    Given Start Broker
 
   Scenario: Creating Unique Tag Without Description
   Login as kapua-sys, go to tags, try to create a tag with unique name without description.
@@ -78,7 +78,7 @@ Feature: Tag Service
       | type    | name                   | value |
       | boolean | infiniteChildEntities  | true  |
       | integer | maxNumberChildEntities | 5     |
-    Then I expect the exception "KapuaException" with the text "Name is too short"
+    Then I expect the exception "KapuaIllegalArgumentException" with the text "An illegal value was provided for the argument tagCreator.name: Value less than allowed min length. Min length is 3."
     When I create tag with name "a" without description
     Then An exception was thrown
     And I logout
@@ -104,7 +104,7 @@ Feature: Tag Service
       | type    | name                   | value |
       | boolean | infiniteChildEntities  | true  |
       | integer | maxNumberChildEntities | 5     |
-    Then I expect the exception "KapuaException" with the text "*"
+    Then I expect the exception "KapuaIllegalArgumentException" with the text "An illegal value was provided for the argument tagCreator.name: Value over than allowed max length. Max length is 255."
     When I create tag with name "aY5gJ7o5XPkLBBFttelFa6tKTfF2G905xbQL7MTpoKcW8hDnXUORC0Rv0z6MJm1vKZPt6Wm6EB7RiJrP0D0hi28R2272J5inIlA7KiDxSKljwX4N7zW8RK7fwhUkwemA5qyF2DQ2DncXTUxsyAlXhh9qIJ43cPC7lSWyTNUFnMshYlLtB2ArnXPgLDQLooJlfdn6qbwTnNUOxML0OYrVoV1spfsZQEYsmFk9r53mfLajIfxDeHtoEShDxnHL4fgh" without description
     Then An exception was thrown
     And I logout
@@ -131,184 +131,184 @@ Feature: Tag Service
       | type    | name                   | value |
       | boolean | infiniteChildEntities  | true  |
       | integer | maxNumberChildEntities | 5     |
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag@" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag!" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag&#34123" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag$" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag#" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag%" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag&" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag'" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag()" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag=" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag»" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÇ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag>" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag<" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag:" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag;" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag-" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag." without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag," without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag€" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag‹" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag›" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag*" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tagı" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag–" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag°" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag·" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag‚" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag_" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag±" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagŒ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag„" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag‰" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag?" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag“" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag‘" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag”’" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÉ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagØ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag∏" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag{}" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag|" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÆ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tagæ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÒ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÔ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÓ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÌ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÏ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÎÍ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÅ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag«" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag◊" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÑ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tagˆ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag¯" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "TagÈ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tagˇ" without description
     Then An exception was thrown
-    Then I expect the exception "KapuaIllegalNullArgumentException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "*"
     When I create tag with name "Tag¿" without description
     Then An exception was thrown
     And I logout
@@ -429,7 +429,7 @@ Feature: Tag Service
       | type    | name                   | value |
       | boolean | infiniteChildEntities  | true  |
       | integer | maxNumberChildEntities | 5     |
-    Given I expect the exception "KapuaException"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "An illegal value was provided for the argument tagCreator.name: Value over than allowed max length. Max length is 255."
     When I create tag with name "aoAB7rpR552NlNY0TV8G4h7pikTASljfgRzc50ZSXBX5finW69LHoExMG3gyYpOeboQ01plWuF74qrYT2fvgtjmpLVn7UkbAVWvok7kDodu3rJGqaHIIBIxdAm1FhoWM0sc9ROSeEyv0RV1WVH2Fey4eVFf5aqG3T6hSwUNpJFblaZvfLoh3f9aBPNibEsVFSmqvJwdH3Vi1q8NHfv3hlTUxZidLCphUSTGaB8Yecp7mJJXVM1OwXCpiOcyGc5Uj" and description "Valid description 123"
     Then An exception was thrown
     And I logout
@@ -579,7 +579,7 @@ Feature: Tag Service
       | boolean | infiniteChildEntities  | true  |
       | integer | maxNumberChildEntities | 5     |
     When I create tag with name "Tag1" without description
-    Given I expect the exception "KapuaException" with the text "*"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "An illegal value was provided for the argument tag.name: Value less than allowed min length. Min length is 3."
     And Tag name is changed into name "a"
     Then An exception was thrown
     Then I logout
@@ -607,7 +607,7 @@ Feature: Tag Service
       | boolean | infiniteChildEntities  | true  |
       | integer | maxNumberChildEntities | 5     |
     When I create tag with name "Tag1" without description
-    Given I expect the exception "KapuaException" with the text "*"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "An illegal value was provided for the argument tag.name: Value over than allowed max length. Max length is 255."
     When Tag name is changed into name "aYXZb6s4L1f6Xk9J23S5RcNcH4Befzk4fg1fDi0PkIbCGtaIN50lWeklthY7Ngo06ss6lmUcqaHiChWjXYdqlcn1UMyqCHcuP4eG0qc9h7a9FLlnXgiFvcAQfvki8iwTPVEdEpBzOWZoWEssb9v966k0tSeQye4yxFC2FyR2SlNZTW06D0krB6zjKa8k5t1BJ2HbJwj5cp8Gsabjyk8lEtlMBeDLqCJv3ik3MZhySD1UvXMkWpOPZoixik8tCBHX"
     Then An exception was thrown
     Then I logout
@@ -635,7 +635,7 @@ Feature: Tag Service
       | boolean | infiniteChildEntities  | true  |
       | integer | maxNumberChildEntities | 5     |
     When I create tag with name "Tag1" without description
-    Given I expect the exception "KapuaException" with the text "*"
+    Given I expect the exception "KapuaIllegalArgumentException" with the text "An illegal value was provided for the argument tag.name: Tag@1#2?*=)3."
     When Tag name is changed into name "Tag@1#2?*=)3"
     Then An exception was thrown
     Then I logout
@@ -649,7 +649,7 @@ Feature: Tag Service
       | boolean | infiniteChildEntities  | true  |
       | integer | maxNumberChildEntities | 5     |
     When I create tag with name "Tag1" without description
-    Given I expect the exception "Exception" with the text "*"
+    Given I expect the exception "KapuaIllegalNullArgumentException" with the text "*"
     When Tag name is changed into name ""
     Then An exception was thrown
     Then I logout
@@ -858,7 +858,7 @@ Feature: Tag Service
     Then No exception was thrown
     And I logout
 
-  Scenario: Changig Description On Tag With Too Long Description
+  Scenario: Changing Description On Tag With Too Long Description
   Login as kapua-sys, go to tags, try to edit description on a tag with too long (256) description.
   Kapua should throw Exception.
     Given I login as user with name "kapua-sys" and password "kapua-password"
@@ -905,9 +905,7 @@ Feature: Tag Service
     When I create tag with name "Tag1" without description
     And Tag with name "Tag1" is searched
     Then Tag with name "Tag1" is found and deleted
-    Given I expect the exception "NullPointerException" with the text "*"
     When Tag with name "Tag1" is searched
-    Then An exception was thrown
     Given I expect the exception "NullPointerException" with the text "*"
     When Tag with name "Tag1" is found and deleted
     Then An exception was thrown
@@ -969,39 +967,38 @@ Feature: Tag Service
     And I asign tag to device
     Given Tag is assigned to device
     And No exception was thrown
-    Given I expect the exception "KapuaException" with the text "*"
     When I asign tag to device
-    Then An exception was thrown
+    Then No exception was thrown
     Then I logout
 
-  Scenario: Adding 100 Tags Without Description To Device
-  Login as kapua-sys, go to tags, create 100 tags.
-  Go to devices, select a device and add created tags to it.
-  Kapua should not return any errors.
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And I configure the tag service
-      | type    | name                   | value |
-      | boolean | infiniteChildEntities  | true  |
-      | integer | maxNumberChildEntities | 5     |
-    And I configure the device registry service
-      | type    | name                   | value |
-      | boolean | infiniteChildEntities  | true  |
-      | integer | maxNumberChildEntities | 10    |
-    When A device named "Device1"
-    Given I create 100 tags without description and asign them to device
-    When Tag with name "Tag003" is searched
-    Then Tag with name "Tag003" is found
-    Given Tag is assigned to device
-    Then No exception was thrown
-    When Tag with name "Tag099" is searched
-    Then Tag with name "Tag099" is found
-    Given Tag is assigned to device
-    Then No exception was thrown
-    When Tag with name "Tag000" is searched
-    Then Tag with name "Tag000" is found
-    Given Tag is assigned to device
-    Then No exception was thrown
-    And I logout
+#  Scenario: Adding 100 Tags Without Description To Device
+#  Login as kapua-sys, go to tags, create 100 tags.
+#  Go to devices, select a device and add created tags to it.
+#  Kapua should not return any errors.
+#    Given I login as user with name "kapua-sys" and password "kapua-password"
+#    And I configure the tag service
+#      | type    | name                   | value |
+#      | boolean | infiniteChildEntities  | true  |
+#      | integer | maxNumberChildEntities | 5     |
+#    And I configure the device registry service
+#      | type    | name                   | value |
+#      | boolean | infiniteChildEntities  | true  |
+#      | integer | maxNumberChildEntities | 10    |
+#    When A device named "Device1"
+#    Given I create 100 tags without description and asign them to device
+#    When Tag with name "Tag003" is searched
+#    Then Tag with name "Tag003" is found
+#    Given Tag is assigned to device
+#    Then No exception was thrown
+#    When Tag with name "Tag099" is searched
+#    Then Tag with name "Tag099" is found
+#    Given Tag is assigned to device
+#    Then No exception was thrown
+#    When Tag with name "Tag000" is searched
+#    Then Tag with name "Tag000" is found
+#    Given Tag is assigned to device
+#    Then No exception was thrown
+#    And I logout
 
   Scenario: Adding Tag With Long Name Without Description To Device
   Login as kapua-sys, go to tags, create a tag with long (255) name.
@@ -1104,9 +1101,7 @@ Feature: Tag Service
     Then Tag is assigned to device
     And No exception was thrown
     Given I unassign tag from device
-    And I expect the exception "KapuaException" with the text "*"
-    When Tag is assigned to device
-    Then An exception was thrown
+    When Tag is not assigned to device
     Then I logout
 
   Scenario: Adding Previously Deleted Tag From Device Again
@@ -1132,9 +1127,7 @@ Feature: Tag Service
     Then Tag is assigned to device
     And No exception was thrown
     Given I unassign tag from device
-    And I expect the exception "KapuaException" with the text "*"
-    When Tag is assigned to device
-    Then An exception was thrown
+    When Tag is not assigned to device
     Given I asign tag to device
     And Tag is assigned to device
     Then No exception was thrown
@@ -1158,12 +1151,11 @@ Feature: Tag Service
     Then An exception was thrown
     Then I logout
 
-  Scenario: Stop broker after all scenarios
-    Given Stop Broker
-
-  Scenario: Stop event broker for all scenarios
-    Given Stop Event Broker
-
-  Scenario: Stop datastore after all scenarios
-    Given Stop Datastore
-
+#  Scenario: Stop broker after all scenarios
+#    Given Stop Broker
+#
+#  Scenario: Stop event broker for all scenarios
+#    Given Stop Event Broker
+#
+#  Scenario: Stop datastore after all scenarios
+#    Given Stop Datastore
