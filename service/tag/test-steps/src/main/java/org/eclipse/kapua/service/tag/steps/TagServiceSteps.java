@@ -165,6 +165,29 @@ public class TagServiceSteps extends TestBase {
             verifyException(ke);
         }
 
+        try {
+            TagQuery query = tagFactory.newQuery(SYS_SCOPE_ID);
+            query.setPredicate(query.attributePredicate(TagAttributes.NAME, tagName, AttributePredicate.Operator.EQUAL));
+            TagListResult queryResult = tagService.query(query);
+            Tag foundTag = queryResult.getFirstItem();
+            stepData.put("tag", foundTag);
+            stepData.put("queryResult", queryResult);
+        } catch (Exception e) {
+            verifyException(e);
+        }
+    }
+
+    @When("^I delete tag with name \"([^\"]*)\"$")
+    public void deleteTagWithName(String tagName) throws Throwable {
+        try {
+            TagQuery query = tagFactory.newQuery(SYS_SCOPE_ID);
+            query.setPredicate(query.attributePredicate(TagAttributes.NAME, tagName, AttributePredicate.Operator.EQUAL));
+            TagListResult queryResult = tagService.query(query);
+            Tag foundTag = queryResult.getFirstItem();
+            tagService.delete(foundTag.getScopeId(), foundTag.getId());
+        } catch (Exception e) {
+            verifyException(e);
+        }
     }
 
     @Then("^I find a tag with name \"([^\"]*)\"$")
@@ -183,12 +206,16 @@ public class TagServiceSteps extends TestBase {
     @Then("^I find and delete tag with name \"([^\"]*)\"$")
     public void tagWithNameIsDeleted(String tagName) throws Throwable {
 
-        Tag foundTag = (Tag) stepData.get("tag");
-        TagListResult queryResult = (TagListResult) stepData.get("queryResult");
-        tagService.delete(foundTag.getScopeId(), foundTag.getId());
-        queryResult.clearItems();
-        foundTag = queryResult.getFirstItem();
-        Assert.assertEquals(null,foundTag);
+        try {
+            Tag foundTag = (Tag) stepData.get("tag");
+            TagListResult queryResult = (TagListResult) stepData.get("queryResult");
+            tagService.delete(foundTag.getScopeId(), foundTag.getId());
+            queryResult.clearItems();
+            foundTag = queryResult.getFirstItem();
+            Assert.assertEquals(null, foundTag);
+        } catch (Exception e) {
+            verifyException(e);
+        }
     }
 
     /**
@@ -229,6 +256,44 @@ public class TagServiceSteps extends TestBase {
             tagService.delete(getCurrentScopeId(), tag.getId());
         } catch (KapuaException ex) {
             verifyException(ex);
+        }
+    }
+
+    @And("^I create a tag with name \"([^\"]*)\" and description \"([^\"]*)\"$")
+    public void iCreateATagWithNameAndDescription(String tagName, String tagDescription) throws Throwable {
+
+        try {
+            TagCreator tagCreator = tagCreatorCreatorWithDescription(tagName, tagDescription);
+            stepData.remove("tag");
+            Tag tag = tagService.create(tagCreator);
+            stepData.put("tag", tag);
+        } catch (Exception e) {
+            verifyException(e);
+        }
+    }
+
+    private TagCreator tagCreatorCreatorWithDescription(String tagName, String tagDescription) {
+
+        TagCreator tagCreator = tagFactory.newCreator(SYS_SCOPE_ID);
+        tagCreator.setName(tagName);
+        tagCreator.setDescription(tagDescription);
+
+        return tagCreator;
+    }
+
+    @When("^I change tag name from \"([^\"]*)\" to \"([^\"]*)\"$")
+    public void iChangeTagNameFromTo(String tagName, String newTagName) throws Throwable {
+
+        try {
+            TagQuery query = tagFactory.newQuery(SYS_SCOPE_ID);
+            query.setPredicate(query.attributePredicate(TagAttributes.NAME, tagName, AttributePredicate.Operator.EQUAL));
+            TagListResult queryResult = tagService.query(query);
+            Tag foundTag = queryResult.getFirstItem();
+
+            foundTag.setName(newTagName);
+            tagService.update(foundTag);
+        } catch (Exception e) {
+            verifyException(e);
         }
     }
 }

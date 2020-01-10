@@ -56,12 +56,13 @@ import org.eclipse.kapua.service.authentication.credential.shiro.CredentialQuery
 import org.eclipse.kapua.service.authorization.access.AccessInfoCreator;
 import org.eclipse.kapua.service.authorization.access.AccessInfoFactory;
 import org.eclipse.kapua.service.authorization.access.AccessInfoService;
-import org.eclipse.kapua.service.authorization.access.shiro.AccessPermissionQueryImpl;
-import org.eclipse.kapua.service.authorization.access.AccessPermissionFactory;
-import org.eclipse.kapua.service.authorization.access.AccessPermissionService;
-import org.eclipse.kapua.service.authorization.access.AccessPermissionQuery;
 import org.eclipse.kapua.service.authorization.access.AccessPermission;
 import org.eclipse.kapua.service.authorization.access.AccessPermissionAttributes;
+import org.eclipse.kapua.service.authorization.access.AccessPermissionFactory;
+import org.eclipse.kapua.service.authorization.access.AccessPermissionListResult;
+import org.eclipse.kapua.service.authorization.access.AccessPermissionQuery;
+import org.eclipse.kapua.service.authorization.access.AccessPermissionService;
+import org.eclipse.kapua.service.authorization.access.shiro.AccessPermissionQueryImpl;
 import org.eclipse.kapua.service.authorization.domain.DomainAttributes;
 import org.eclipse.kapua.service.authorization.domain.DomainListResult;
 import org.eclipse.kapua.service.authorization.domain.DomainFactory;
@@ -540,6 +541,28 @@ public class UserServiceSteps extends TestBase {
         createPermissions(permissionList, (ComparableUser) stepData.get("LastUser"), (Account) stepData.get("LastAccount"));
     }
 
+    @Given("^Revoke permissions from the last created user$")
+    public void revokePermissions(List<Permission> permissionList) throws Exception {
+
+        for (Permission permission : permissionList) {
+            deletePermission(permission, (ComparableUser) stepData.get("LastUser"));
+        }
+
+    }
+
+    private void deletePermission(Permission permission, ComparableUser user) throws Exception {
+        try {
+            AccessPermissionQuery query = new AccessPermissionQueryImpl(user.getUser().getId());
+            query.setPredicate(
+                    query.attributePredicate(AccessPermissionAttributes.PERMISSION_DOMAIN, permission.getDomain())
+            );
+            AccessPermission accessPermission = accessPermissionService.query(query).getFirstItem();
+            accessInfoService.delete(accessPermission.getScopeId(), accessPermission.getId());
+        } catch (KapuaException ke) {
+            verifyException(ke);
+        }
+    }
+
     @Given("^Full permissions$")
     public void givenFullPermissions() throws Exception {
         createPermissions(null, (ComparableUser) stepData.get("LastUser"), (Account) stepData.get("LastAccount"));
@@ -551,6 +574,20 @@ public class UserServiceSteps extends TestBase {
         primeException();
         try {
             accessPermissionService.delete(accessPermission.getScopeId(), accessPermission.getId());
+        } catch (KapuaException ex) {
+            verifyException(ex);
+        }
+    }
+
+    @Given("^I delete all permissions added to the new User$")
+    public void deleteAllPermissionsForUser() throws Exception {
+        primeException();
+        try {
+            AccessPermissionQuery permissionQuery = new AccessPermissionQueryImpl(getCurrentScopeId());
+            AccessPermissionListResult accessPermissionListResult = accessPermissionService.query(permissionQuery);
+            for (int i = 0; i < accessPermissionListResult.getSize(); i++) {
+                accessInfoService.delete(SYS_SCOPE_ID, accessPermissionListResult.getItem(i).getId());
+            }
         } catch (KapuaException ex) {
             verifyException(ex);
         }
@@ -999,16 +1036,16 @@ public class UserServiceSteps extends TestBase {
     }
 
     @Then("^I try to edit user to name \"([^\"]*)\"$")
-    public void iTryToEditUserWithName(String newUserName) throws Exception {
-        User user = (User) stepData.get("User");
-        user.setName(newUserName);
+    public void iTryToEditUserWithName(String newUserName) throws Throwable {
 
         try {
+            User user = (User) stepData.get("User");
+            user.setName(newUserName);
             primeException();
             stepData.remove("User");
             User newUser = userService.update(user);
             stepData.put("User", newUser);
-        } catch (KapuaException ex) {
+        } catch (Exception ex) {
             verifyException(ex);
         }
     }

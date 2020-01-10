@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2019 Eurotech and/or its affiliates and others
+# Copyright (c) 2020 Eurotech and/or its affiliates and others
 #
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v1.0
@@ -14,15 +14,6 @@
 @integration
 
 Feature: User Permission tests
-
-  Scenario: Start datastore for all scenarios
-    Given Start Datastore
-
-  Scenario: Start event broker for all scenarios
-    Given Start Event Broker
-
-  Scenario: Start broker for all scenarios
-    Given Start Broker
 
   Scenario: Adding One Permission To User
     Create a new user kapua-a, with only one permission - user:read.
@@ -873,13 +864,18 @@ Feature: User Permission tests
     Then No exception was thrown
     And I logout
 
-  Scenario: Adding Account:Read permission to user in same scope
-  Login as kapua-sys user on the kapua-sys account and add a new user0 user with
-  the Account:Read permission to the kapua-sys account. Create a child account subAccount0.
-  Login as user0 and perform actions on the subAccount0. Verify that only allowed actions
-  are performed and the exception is thrown where needed.
+  Scenario: Adding Role:Read permission to user in same scope
+  Login as kapua-sys.
+  Create a few roles.
+  Create a sample user in kapua-sys account (e.g. User0).
+  Add Role:Read permission to user0.
+  Login as user0 and query roles - no exception should be thrown.
+  Try to create a role - it should not be possible without Role:Write permission.
+  Try to edit a role - it should not be possible without Role:Write permission.
+  Try to delete a role - it should not be possible without Role:Write permission.
 
     Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
     And I select account "kapua-sys"
     And A generic user
       | name  | displayName  | email           | phoneNumber     | status  | userType |
@@ -887,26 +883,28 @@ Feature: User Permission tests
     And I add credentials
       | name  | password          | enabled |
       | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
     And Add permissions to the last created user
-      | domain  | action |
-      | account | read   |
-    And Account
-      | name        | scopeId |
-      | subAccount0 | 1       |
+      | domain | action |
+      | role   | read   |
     Then I logout
-    When I login as user with name "user0" and password "ToManySecrets123#"
-    Then I search for the account with the remembered account Id
-    And I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I modify the account "subAccount0"
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Then I query for the role "role1" in scope 1
+    And The role was found
+    And No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I create the following roles
+      | scopeId | name      |
+      | 1       | role3     |
     Then An exception was thrown
-    And I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I delete account "subAccount0"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I update role "role1" to name "role6"
     Then An exception was thrown
-    And I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I modify the account "kapua-sys"
-    Then An exception was thrown
-    And I expect the exception "KapuaIllegalNullArgumentException" with the text "An illegal null value was provided"
-    When I delete account "kapua-sys"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:delete:1:*"
+    When I delete the role "role2"
     Then An exception was thrown
     And I logout
 
@@ -949,13 +947,47 @@ Feature: User Permission tests
     And An exception was thrown
     And I logout
 
-  Scenario: Adding Account:Delete permission to user in same scope
-  Login as kapua-sys user on the kapua-sys account and add a new user0 user with
-  the Account:Delete permission to the kapua-sys account. Create a child account subAccount0.
-  Login as user0 and perform actions on the subAccount0. Verify that only allowed actions are
-  performed and the exception is thrown where needed.
+      # TODO: still waiting for fix of issue #2776
+#  Scenario: Adding Role:Read permission to user in same scope TWICE
+#  Login as kapua-sys
+#  Create a few roles
+#  Create a sample user in kapua-sys account (e.g. User0)
+#  Add Role:Read permission to user0
+#  Again add Role:Read permission to user0
+#  Kapua should throw an exception.
+#
+#    Given I login as user with name "kapua-sys" and password "kapua-password"
+#    And Scope with ID 1
+#    And I select account "kapua-sys"
+#    And A generic user
+#      | name  | displayName  | email           | phoneNumber     | status  | userType |
+#      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+#    And Credentials
+#      | name  | password          | enabled |
+#      | user0 | ToManySecrets123# | true    |
+#    And Add permissions to the last created user
+#      | domain | action |
+#      | role   | read   |
+#    Given I expect the exception "KapuaException" with the text "*"
+#    And Add permissions to the last created user
+#      | domain | action |
+#      | role   | read   |
+#    Then An exception was thrown
+#    Then I logout
+
+  Scenario: Revoking Role:Read permission to user in same scope
+  Login as kapua-sys
+  Create a few roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Read permission to user0
+  Revoke Role:Read permission to user0
+  Login as user0 and query roles - it should not be possible without Role:Read permission
+  Try to create a role - it should not be possible without Role:Read permission
+  Try to edit a role - it should not be possible without Role:Read permission
+  Try to delete a role - it should not be possible without Role:Read permission
 
     Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
     And I select account "kapua-sys"
     And A generic user
       | name  | displayName  | email           | phoneNumber     | status  | userType |
@@ -963,516 +995,2171 @@ Feature: User Permission tests
     And I add credentials
       | name  | password          | enabled |
       | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
     And Add permissions to the last created user
-      | domain  | action |
-      | account | delete |
-    And Account
-      | name        | scopeId |
-      | subAccount0 | 1       |
-    And I logout
-    When I login as user with name "user0" and password "ToManySecrets123#"
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I search for the account with the remembered account Id
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I modify the account "subAccount0"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I delete account "subAccount0"
-    And An exception was thrown
-    And I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I modify the account "kapua-sys"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I delete account "kapua-sys"
-    And An exception was thrown
-    And I logout
-
-  Scenario: Adding Account:Read and Account:Write permissions to user in same scope
-  Login as kapua-sys user on the kapua-sys account and add a new user0 user with the Account:Read
-  and Account:Write permissions to the kapua-sys account. Create a child account subAccount0.
-  Login as user0 and perform actions on the subAccount0. Verify that only allowed actions are
-  performed and the exception is thrown where needed.
-
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And I select account "kapua-sys"
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I add credentials
-      | name  | password          | enabled |
-      | user0 | ToManySecrets123# | true    |
-    And Add permissions to the last created user
-      | domain  | action |
-      | account | read   |
-      | account | write  |
-    And Account
-      | name        | scopeId |
-      | subAccount0 | 1       |
+      | domain | action |
+      | role   | read   |
     Then I logout
-    When I login as user with name "user0" and password "ToManySecrets123#"
-    Then I search for the account with the remembered account Id
-    When I modify the account "subAccount0"
-    And I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I delete account "subAccount0"
-    Then An exception was thrown
-    When I modify the account "kapua-sys"
-    And I expect the exception "KapuaIllegalNullArgumentException" with the text "An illegal null value was provided"
-    When I delete account "kapua-sys"
-    Then An exception was thrown
-    And I logout
-
-  Scenario: Adding Account:Read and Account:Delete permissions to user in same scope
-  Login as kapua-sys user on the kapua-sys account and add a new user0 user with the Account:Read
-  and Account:Delete permissions to the kapua-sys account. Create a child account subAccount0.
-  Login as user0 and perform actions on the subAccount0. Verify that only allowed actions
-  are performed and the exception is thrown where needed.
-
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And I select account "kapua-sys"
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I add credentials
-      | name  | password          | enabled |
-      | user0 | ToManySecrets123# | true    |
-    And Add permissions to the last created user
-      | domain  | action |
-      | account | read   |
-      | account | delete |
-    And Account
-      | name        | scopeId |
-      | subAccount0 | 1       |
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I query for the role "role1" in scope 1
+    Then No exception was thrown
     Then I logout
-    When I login as user with name "user0" and password "ToManySecrets123#"
-    Then I search for the account with the remembered account Id
-    And I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I modify the account "subAccount0"
+    And I login as user with name "kapua-sys" and password "kapua-password"
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I query for the role "role1" in scope 1
     Then An exception was thrown
-    When I delete account "subAccount0"
-    And I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I modify the account "kapua-sys"
-    Then An exception was thrown
-    And I expect the exception "KapuaIllegalNullArgumentException" with the text "An illegal null value was provided"
-    When I delete account "kapua-sys"
-    Then An exception was thrown
-    And I logout
-
-  Scenario: Adding Account:Write and Account:Delete permission to user in same scope
-  Login as kapua-sys user on the kapua-sys account and add a new user0 user with the Account:Write
-  and Account:Delete permission to the kapua-sys account. Create a child account subAccount0.
-  Login as user0 and perform actions on the subAccount0. Verify that only allowed actions are
-  performed and the exception is thrown where needed.
-
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And I select account "kapua-sys"
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I add credentials
-      | name  | password          | enabled |
-      | user0 | ToManySecrets123# | true    |
-    And Add permissions to the last created user
-      | domain  | action |
-      | account | write  |
-      | account | delete |
-    And Account
-      | name        | scopeId |
-      | subAccount0 | 1       |
-    And I logout
-    When I login as user with name "user0" and password "ToManySecrets123#"
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I search for the account with the remembered account Id
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I modify the account "subAccount0"
-    And An exception was thrown
-    When I delete account "subAccount0"
-    And I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I modify the account "kapua-sys"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I delete account "kapua-sys"
-    And An exception was thrown
-    And I logout
-
-    Scenario: Adding all Account permissions to user in same scope
-    Login as kapua-sys user on the kapua-sys account and add a new user0 user with all account
-    domain permissions to the kapua-sys account. Create a child account subAccount0.
-    Login as user0 and perform actions on the subAccount0. Verify that only allowed actions are
-    performed and the exception is thrown where needed.
-
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And I select account "kapua-sys"
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I add credentials
-      | name  | password          | enabled |
-      | user0 | ToManySecrets123# | true    |
-    And Add permissions to the last created user
-      | domain  | action |
-      | account | read   |
-      | account | write  |
-      | account | delete |
-    And Account
-      | name        | scopeId |
-      | subAccount0 | 1       |
-    And I logout
-    When I login as user with name "user0" and password "ToManySecrets123#"
-    Then I search for the account with the remembered account Id
-    And I modify the account "subAccount0"
-    And I delete account "subAccount0"
-    And I modify the account "kapua-sys"
-    Then I expect the exception "KapuaIllegalNullArgumentException" with the text "An illegal null value was provided"
-    When I delete account "kapua-sys"
-    And An exception was thrown
-    And I logout
-
-   Scenario: Adding Account:Read permission to user in sub-account scope
-   Login as kapua-sys user on the kapua-sys account and create a new subaccount0 account.
-   Create another subAccount1 and add a user1 user with the Account:Read permission to it.
-   Login as user1 and perform actions on the subAccount0, subAccount1 and the kapua-sys accounts.
-   Verify that only allowed actions are performed and the exception is thrown where needed.
-
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And Account
-      | name        | scopeId |
-      | subAccount0 | 1       |
-    And I select account "kapua-sys"
-    And Account
-      | name        | scopeId |
-      | subAccount1 | 1       |
-     And I configure account service
-      | type    | name                   | value |
-      | boolean | infiniteChildEntities  | true  |
-      | integer | maxNumberChildEntities | 5     |
-    And I configure user service
-      | type    | name                       | value |
-      | boolean | infiniteChildEntities      | true  |
-      | integer | maxNumberChildEntities     | 5     |
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I add credentials
-      | name  | password          | enabled |
-      | user1 | ToManySecrets123# | true    |
-    And Add permissions to the last created user
-      | domain  | action |
-      | account | read   |
-    And I logout
-    When I login as user with name "user1" and password "ToManySecrets123#"
-    Then I search for the account with the remembered account Id
-    And Account "subAccount1" has 0 children
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I modify the account "subAccount0"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I delete account "subAccount0"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I modify the account "kapua-sys"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    When I delete account "kapua-sys"
-    And An exception was thrown
-    Then Account
-       | name         |
-       | subAccount01 |
-     And Account "subAccount1" has 1 children
-     And I logout
-
-  Scenario: Adding Account:Write permission to user in sub-account scope
-  Login as kapua-sys user on the kapua-sys account and create a new subaccount0 account.
-  Create another subAccount1 and add a user1 user with the Account:Write permission to it.
-  Login as user0 and perform actions on the subAccount0 and subAccount1 accounts.
-  Verify that only allowed actions are performed and the exception is thrown where needed.
-
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And Account
-      | name        | scopeId |
-      | subAccount0 | 1       |
-    And I select account "kapua-sys"
-    And Account
-      | name        | scopeId |
-      | subAccount1 | 1       |
-    And I configure account service
-      | type    | name                   | value |
-      | boolean | infiniteChildEntities  | true  |
-      | integer | maxNumberChildEntities | 5     |
-    And I configure user service
-      | type    | name                       | value |
-      | boolean | infiniteChildEntities      | true  |
-      | integer | maxNumberChildEntities     | 5     |
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I add credentials
-      | name  | password          | enabled |
-      | user1 | ToManySecrets123# | true    |
-    And Add permissions to the last created user
-      | domain  | action |
-      | account | write  |
-    And I logout
-    When I login as user with name "user1" and password "ToManySecrets123#"
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And Account "subAccount1" has 0 children
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I modify the account "subAccount0"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I delete account "subAccount0"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I modify the account "subAccount1"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I delete account "subAccount1"
-    And An exception was thrown
-    Then Account
-     | name         |
-     | subAccount01 |
-    And Account "subAccount1" has 1 children
-    And I set the expiration date to 2030-05-05
-    And I logout
-
-  Scenario: Adding Account:Delete permission to user in sub-account scope
-  Login as kapua-sys user on the kapua-sys account and create a new subaccount0 account.
-  Create another subAccount1 and add a user1 user with the Account:Delete permission to it.
-  Login as user1 and perform actions on the subAccount0 and subAccount1 accounts.
-  Verify that only allowed actions are performed and the exception is thrown where needed.
-
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And Account
-      | name        | scopeId |
-      | subAccount0 | 1       |
-    And I select account "kapua-sys"
-    And Account
-      | name        | scopeId |
-      | subAccount1 | 1       |
-    And I configure account service
-      | type    | name                   | value |
-      | boolean | infiniteChildEntities  | true  |
-      | integer | maxNumberChildEntities | 5     |
-    And I configure user service
-      | type    | name                       | value |
-      | boolean | infiniteChildEntities      | true  |
-      | integer | maxNumberChildEntities     | 5     |
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I add credentials
-      | name  | password          | enabled |
-      | user1 | ToManySecrets123# | true    |
-    And Add permissions to the last created user
-      | domain  | action |
-      | account | delete |
-    Then Account
-      | name         |
-      | subAccount10 |
-    And I logout
-    When I login as user with name "user1" and password "ToManySecrets123#"
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And Account "subAccount1" has 1 children
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I modify the account "subAccount0"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I delete account "subAccount0"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I modify the account "subAccount1"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I delete account "subAccount1"
-    And An exception was thrown
-    And I delete account "subAccount10"
-    And I logout
-
-  Scenario: Adding all Account permissions to user in sub-account scope
-  Login as kapua-sys user on the kapua-sys account and create a new subaccount1 account.
-  Create another subAccount01 and add a user1 user with all account domain permissions to it.
-  Login as user1 and perform actions on the subAccount1 and subAccount01 accounts.
-  Verify that only allowed actions are performed and the exception is thrown where needed.
-
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And I select account "kapua-sys"
-    And Account
-      | name        | scopeId |
-      | subAccount1 | 1       |
-    And Account
-      | name         | scopeId |
-      | subAccount01 | 1       |
-    And I configure account service
-      | type    | name                   | value |
-      | boolean | infiniteChildEntities  | true  |
-      | integer | maxNumberChildEntities | 5     |
-    And I configure user service
-      | type    | name                       | value |
-      | boolean | infiniteChildEntities      | true  |
-      | integer | maxNumberChildEntities     | 5     |
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I add credentials
-      | name  | password          | enabled |
-      | user1 | ToManySecrets123# | true    |
-    And Add permissions to the last created user
-      | domain  | action |
-      | account | read   |
-      | account | write  |
-      | account | delete |
-    And I logout
-    When I login as user with name "user1" and password "ToManySecrets123#"
-    And Account "subAccount01" has 0 children
-    And I modify the account "subAccount01"
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I delete account "subAccount01"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I modify the account "subAccount1"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I delete account "subAccount1"
-    And An exception was thrown
-    And I logout
-
-  Scenario: Modifying Sub-account of a different parent account
-  Login as kapua-sys user on the kapua-sys account and create a new subaccount0 account
-  and add user0 to it. Create another subAccount1 and a subAccount01, with user1 on it. User1 has only
-  the Account:Read permision. Login as user1 and perform actions on the user0 and subAccount0. Verify
-  that only allowed actions are performed and the exception is thrown where needed.
-
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And Account
-      | name        | scopeId |
-      | subAccount0 | 1       |
-    And I configure user service
-      | type    | name                       | value |
-      | boolean | infiniteChildEntities      | true  |
-      | integer | maxNumberChildEntities     | 5     |
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I select account "kapua-sys"
-    And Account
-      | name        | scopeId |
-      | subAccount1 | 1       |
-    And Account
-      | name         | scopeId |
-      | subAccount01 | 1       |
-    And I configure account service
-      | type    | name                   | value |
-      | boolean | infiniteChildEntities  | true  |
-      | integer | maxNumberChildEntities | 5     |
-    And I configure user service
-      | type    | name                       | value |
-      | boolean | infiniteChildEntities      | true  |
-      | integer | maxNumberChildEntities     | 5     |
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I add credentials
-      | name  | password          | enabled |
-      | user1 | ToManySecrets123# | true    |
-    And Add permissions to the last created user
-      | domain  | action |
-      | account | read   |
-    And I logout
-    When I login as user with name "user1" and password "ToManySecrets123#"
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I search for user with name "user0"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I modify the account "subAccount0"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I delete account "subAccount0"
-    And An exception was thrown
-    And I logout
-
-  Scenario: Querying Other Items With All Account Permissions
-  Login as kapua-sys user on the kapua-sys account and create a new account1 account and add user1 to it.
-  User1 should have all the permissions from the account domain. Create a new device, job, tag, group and role.
-  Login as user1 and perform actions on the added entities. Verify that only allowed actions are performed and
-  the exception is thrown where needed.
-
-    Given I login as user with name "kapua-sys" and password "kapua-password"
-    And I select account "kapua-sys"
-    And Account
-      | name        | scopeId |
-      | subAccount1 | 1       |
-    And I configure user service
-      | type    | name                       | value |
-      | boolean | infiniteChildEntities      | true  |
-      | integer | maxNumberChildEntities     | 5     |
-    And I configure the device registry service
-      | type    | name                   | value |
-      | boolean | infiniteChildEntities  | true  |
-      | integer | maxNumberChildEntities |  10   |
-    And I configure the tag service
-      | type    | name                       | value |
-      | boolean | infiniteChildEntities      | true  |
-      | integer | maxNumberChildEntities     | 5     |
-    And I configure the job service
-      | type    | name                       | value |
-      | boolean | infiniteChildEntities      | true  |
-      | integer | maxNumberChildEntities     | 5     |
-    And I configure the group service
-      | type    | name                   | value |
-      | boolean | infiniteChildEntities  | true  |
-      | integer | maxNumberChildEntities | 5     |
-    And I configure the role service
-      | type    | name                       | value |
-      | boolean | infiniteChildEntities      | true  |
-      | integer | maxNumberChildEntities     | 5     |
-    And A generic user
-      | name  | displayName  | email           | phoneNumber     | status  | userType |
-      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
-    And I add credentials
-      | name  | password          | enabled |
-      | user1 | ToManySecrets123# | true    |
-    And Add permissions to the last created user
-      | domain  | action |
-      | account | read   |
-      | account | write  |
-      | account | delete |
-    And A device named "test_device"
-    And I create a job with the name "test_job"
-    And I create a tag with name "test_tag"
-    And I create the group with name "test_group"
-    And I create the following role
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I create the following roles
       | scopeId | name      |
-      | 1       | test_role |
+      | 1       | role3     |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
     Then I logout
-    When I login as user with name "user1" and password "ToManySecrets123#"
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I search for user with name "user1"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I query for devices with Client Id "test_device"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I find a job with name "test_job"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And Tag with name "test_tag" is searched
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I search for the group with name "test_group"
-    And An exception was thrown
-    Then I expect the exception "SubjectUnauthorizedException" with the text "User does not have permission"
-    And I find a role with name "test_role"
-    And An exception was thrown
-    And I logout
 
-  Scenario: Stop broker after all scenarios
-    Given Stop Broker
+  Scenario: Adding Role:Write permission to user in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Write permission to user0
+  Login as user0 and try to query roles, it should not be possible without Role:Read permission
+  Try to create a role - it should not be possible without Role:Read permission
+  Try to edit a role - it should not be possible without Role:Read permission
+  Try to delete Role - it should not be possible without Role:Read permission
 
-  Scenario: Stop event broker for all scenarios
-    Given Stop Event Broker
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | write  |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I query for the role "role1" in scope 1
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I create the following roles
+      | scopeId | name      |
+      | 1       | role3     |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
 
-  Scenario: Stop datastore after all scenarios
-    Given Stop Datastore
+  Scenario: Revoking Role:Write permission to user in same scope
+  Login as kapua-sys
+  Create a few roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Write permission to user0
+  Revoke Role:Read permission to user0
+  Login as user0 and query roles - it should not be possible without Role:Read permission
+  Try to create a role - it should not be possible without Role:Read permission
+  Try to edit a role - it should not be possible without Role:Read permission
+  Try to delete a role - it should not be possible without Role:Read permission
+
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | write  |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I create the following roles
+      | scopeId | name      |
+      | 1       | role8     |
+    Then An exception was thrown
+    Then I logout
+    And I login as user with name "kapua-sys" and password "kapua-password"
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I query for the role "role1" in scope 1
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I create the following roles
+      | scopeId | name      |
+      | 1       | role3     |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Role:Delete permission to user in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Delete permission to user0
+  Login as user0 and try to query roles, it should not be possible without Role:Read permission
+  Try to create a role - it should not be possible without Role:Read permission
+  Try to edit a role - it should not be possible without Role:Read and Role:Read permissions
+  Try to delete a role - it should not be possible without Role:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I query for the role "role1" in scope 1
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I create the following roles
+      | scopeId | name      |
+      | 1       | role3     |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Revoking Role:Delete permission to user in same scope
+  Login as kapua-sys
+  Create a few roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Delete permission to user0
+  Revoke Role:Delete permission to user0
+  Login as user0 and query roles - it should not be possible without Role:Read permission
+  Try to create a role - it should not be possible without Role:Read permission
+  Try to edit a role - it should not be possible without Role:Read permission
+  Try to delete a role - it should not be possible without Role:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role3"
+    Then An exception was thrown
+    Then I logout
+    And I login as user with name "kapua-sys" and password "kapua-password"
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I query for the role "role1" in scope 1
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I create the following roles
+      | scopeId | name      |
+      | 1       | role3     |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Role:Read + Role:Write permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Read and Role:Write permission to user0
+  Login as user0 and try to query roles - no exception should be thrown
+  Try to create a role - no exception should be thrown
+  Try to edit a role - no exception should be thrown
+  Try to delete a role - it should not be possible without Role:Delete permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | read   |
+      | role   | write  |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I query for the role "role1" in scope 1
+    Then The role was found
+    Then No exception was thrown
+    When I create the following roles
+      | scopeId | name      |
+      | 1       | role3     |
+    Then No exception was thrown
+    When I update role "role1" to name "role6"
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:delete:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Role:Read + Role:Write permission to user and revoking Role:Write in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Read and Role:Write permission to user0
+  Revoke Role:Write permission from user0
+  Login as user0 and query roles - no exception should be thrown
+  Try to create a role - it should not be possible without Role:Write permission
+  Try to edit a role - it should not be possible without Role:Write permission
+  Try to delete a role - it should not be possible without Role:Delete permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | read   |
+      | role   | write  |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I query for the role "role1" in scope 1
+    Then The role was found
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I create the following roles
+      | scopeId | name   |
+      | 1       | role3  |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:delete:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Role:Read + Role:Write permission to user and revoking Role:Read in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Read and Role:Write permission to user0
+  Revoke Role:Read permission from user0
+  Login as user0 and query roles - it should not be possible without Role:Read permission
+  Try to create a role - it should not be possible without Role:Read permission
+  Try to edit a role - it should not be possible without Role:Read permission
+  Try to delete a role - it should not be possible without Role:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | write  |
+      | role   | read   |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I query for the role "role1" in scope 1
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I create the following roles
+      | scopeId | name   |
+      | 1       | role3  |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Role:Read + Role:Delete permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Read and Role:Delete permission to user0
+  Login as user0 and try to query roles - no exception should be thrown
+  Try to create a role - it should not be possible without Role:Write permission
+  Try to edit a role - it should not be possible without Role:Write permission
+  Try to delete a role - no exception should be thrown
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | read   |
+      | role   | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I query for the role "role1" in scope 1
+    Then The role was found
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I create the following roles
+      | scopeId | name      |
+      | 1       | role3     |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    When I delete the role "role2"
+    When I query for the role "role2" in scope 1
+    Then I find no roles
+    Then I logout
+
+  Scenario: Adding Role:Read + Role:Delete permission to user and revoking Role:Delete in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Read and Role:Delete permission to user0
+  Revoke Role:Delete permission from user0
+  Login as user0 and query roles - no exception should be thrown
+  Try to create a role - it should not be possible without Role:Write permission
+  Try to edit a role - it should not be possible without Role:Write permission
+  Try to delete a role - it should not be possible without Role:Delete permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | read   |
+      | role   | delete |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I query for the role "role1" in scope 1
+    Then The role was found
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I create the following roles
+      | scopeId | name   |
+      | 1       | role3  |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:delete:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Role:Read + Role:Delete permission to user and revoking Role:Delete in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Read and Role:Delete permission to user0
+  Revoke Role:Read permission from user0
+  Login as user0 and query roles - it should not be possible without Role:Read permission
+  Try to create a role - it should not be possible without Role:Read permission
+  Try to edit a role - it should not be possible without Role:Read permission
+  Try to delete a role - it should not be possible without Role:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | delete |
+      | role   | read   |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I query for the role "role1" in scope 1
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I create the following roles
+      | scopeId | name   |
+      | 1       | role3  |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Role:Write + Role:Delete permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Write and Role:Delete permission to user0
+  Login as user0 and try to query roles - it should not be possible without Role:Read permission
+  Try to create a role - it should not be possible without Role:Read permission
+  Try to edit a role - it should not be possible without Role:Read permission
+  Try to delete a role - it should not be possible without Role:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | write  |
+      | role   | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I query for the role "role1" in scope 1
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I create the following roles
+      | scopeId | name      |
+      | 1       | role3     |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Role:Write + Role:Delete permission to user and revoking Role:Delete in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Write and Role:Write permission to user0
+  Revoke Role:Delete permission from user0
+  Login as user0 and query roles - it should not be possible without Role:Read permission
+  Try to create a role - it should not be possible without Role:Read permission
+  Try to edit a role - it should not be possible without Role:Read permission
+  Try to delete a role - it should not be possible without Role:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | delete |
+      | role   | write  |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I query for the role "role1" in scope 1
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:write:1:*"
+    When I create the following roles
+      | scopeId | name   |
+      | 1       | role3  |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Role:Write + Role:Delete permission to user and revoking Role:Delete in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Role:Write and Role:Delete permission to user0
+  Revoke Role:Write permission from user0
+  Login as user0 and query roles - it should not be possible without Role:Read permission
+  Try to create a role - it should not be possible without Role:Read permission
+  Try to edit a role - it should not be possible without Role:Read permission
+  Try to delete a role - it should not be possible without Role:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | write  |
+      | role   | delete |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I query for the role "role1" in scope 1
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I create the following roles
+      | scopeId | name   |
+      | 1       | role3  |
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I update role "role1" to name "role6"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: role:read:1:*"
+    When I delete the role "role2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Role:All permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample roles
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Account:ALL permission to user0
+  Login as user0 and try to query roles - no exception should be thrown
+  Try to create a role - no exception should be thrown
+  Try to edit a role - no exception should be thrown
+  Try to delete a role - no exception should be thrown
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create the roles
+      | name  |
+      | role1 |
+      | role2 |
+    And Add permissions to the last created user
+      | domain | action |
+      | role   | read   |
+      | role   | write  |
+      | role   | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I query for the role "role1" in scope 1
+    Then No exception was thrown
+    When I create the following roles
+      | scopeId | name      |
+      | 1       | role3     |
+    Then No exception was thrown
+    When I update role "role1" to name "role6"
+    Then No exception was thrown
+    When I delete the role "role2"
+    Then No exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Read permission to user in same scope
+  Login as kapua-sys.
+  Create a few tags.
+  Create a sample user in kapua-sys account (e.g. User0).
+  Add Tag:Read permission to user0.
+  Login as user0 and query tags - no exception should be thrown.
+  Try to create a tag - it should not be possible without Tag:Write permission.
+  Try to edit a tag - it should not be possible without Tag:Write permission.
+  Try to delete a tag - it should not be possible without Tag:Write permission.
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I configure the tag service
+      | type    | name                   | value |
+      | boolean | infiniteChildEntities  | true  |
+      | integer | maxNumberChildEntities | 5     |
+    And I create a tag with name "Tag1" and description "testni tag"
+    And I create a tag with name "Tag2" and description "testni tag"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | read   |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When Tag with name "Tag1" is searched
+    And I find a tag with name "Tag1"
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I create a tag with name "Tag3" and description "Test123"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:delete:1:*"
+    Then I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Revoking Tag:Read permission to user in same scope
+  Login as kapua-sys
+  Create a few tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Read permission to user0
+  Revoke Tag:Read permission to user0
+  Login as user0 and query tags - it should not be possible without Tag:Read permission
+  Try to create a tag - it should not be possible without Tag:Read permission
+  Try to edit a tag - it should not be possible without Tag:Read permission
+  Try to delete a tag - it should not be possible without Tag:Read permission
+
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I configure the tag service
+      | type    | name                   | value |
+      | boolean | infiniteChildEntities  | true  |
+      | integer | maxNumberChildEntities | 5     |
+    And I create a tag with name "Tag1" and description "testni tag"
+    And I create a tag with name "Tag2" and description "testni tag"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | read   |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When Tag with name "Tag1" is searched
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I create a tag with name "Tag3" and description "Test123"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    Then I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Write permission to user in same scope
+  Login as kapua-sys
+  Create a few sample tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Write permission to user0
+  Login as user0 and try to query Tags, it should not be possible without Tag:Read permission
+  Try to create a tag - it should not be possible without Tag:Read permission
+  Try to edit a tag - it should not be possible without Tag:Read permission
+  Try to delete tag - it should not be possible without Tag:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | write  |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When Tag with name "Tag1" is searched
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Revoking Tag:Write permission to user in same scope
+  Login as kapua-sys
+  Create a few tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Write permission to user0
+  Revoke Tag:Write permission to user0
+  Login as user0 and query tags - it should not be possible without Tag:Read permission
+  Try to create a tag - it should not be possible without Tag:Read permission
+  Try to edit a tag - it should not be possible without Tag:Read permission
+  Try to delete a tag - it should not be possible without Tag:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I configure the tag service
+      | type    | name                   | value |
+      | boolean | infiniteChildEntities  | true  |
+      | integer | maxNumberChildEntities | 5     |
+    And I create a tag with name "Tag1" and description "testni tag"
+    And I create a tag with name "Tag2" and description "testni tag"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | write  |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When Tag with name "Tag1" is searched
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I create a tag with name "Tag3" and description "Test123"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    Then I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Delete permission to user in same scope
+  Login as kapua-sys
+  Create a few sample tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Delete permission to user0
+  Login as user0 and try to query tags, it should not be possible without Tag:Read permission
+  Try to create a tag - it should not be possible without Tag:Read permission
+  Try to edit a tag - it should not be possible without Tag:Read and Tag:Read permissions
+  Try to delete a tag - it should not be possible without Tag:Read permission
+
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When Tag with name "Tag1" is searched
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Revoking Tag:Delete permission from user in same scope
+  Login as kapua-sys
+  Create a few tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Delete permission to user0
+  Revoke Tag:Delete permission to user0
+  Login as user0 and query tags - it should not be possible without Tag:Read permission
+  Try to create a tag - it should not be possible without Tag:Read permission
+  Try to edit a tag - it should not be possible without Tag:Read permission
+  Try to delete a tag - it should not be possible without Tag:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I configure the tag service
+      | type    | name                   | value |
+      | boolean | infiniteChildEntities  | true  |
+      | integer | maxNumberChildEntities | 5     |
+    And I create a tag with name "Tag1" and description "testni tag"
+    And I create a tag with name "Tag2" and description "testni tag"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | delete |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When Tag with name "Tag1" is searched
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I create a tag with name "Tag3" and description "Test123"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    Then I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Read + Tag:Write permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Read and Tag:Write permission to user0
+  Login as user0 and try to query tags - no exception should be thrown
+  Try to create a tag - no exception should be thrown
+  Try to edit a tag - no exception should be thrown
+  Try to delete a tag - it should not be possible without Tag:Delete permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | read   |
+      | tag    | write  |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When Tag with name "Tag1" is searched
+    Then I find a tag with name "Tag1"
+    Then No exception was thrown
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then No exception was thrown
+    When I change tag name from "Tag1" to "Tag111"
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:delete:1:*"
+    When I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Read + Tag:Write permission to user and revoke Tag:Write in same scope
+  Login as kapua-sys
+  Create a few sample Tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Read and Tag:Write permission to user0
+  Revoke Tag:Write from user0
+  Login as user0 and try to query Tags - no exception should be thrown
+  Try to create a tag - it should not be possible without Tag:Write permission
+  Try to edit a tag - it should not be possible without Tag:Write permission
+  Try to delete a tag - it should not be possible without Tag:Delete permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | read   |
+      | tag    | write  |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When Tag with name "Tag1" is searched
+    Then I find a tag with name "Tag1"
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:delete:1:*"
+    When I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Read + Tag:Write permission to user and revoke Tag:Read in same scope
+  Login as kapua-sys
+  Create a few sample Tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Read and Tag:Write permission to user0
+  Revoke Tag:Read from user0
+  Login as user0 and try to query Tags - it should not be possible without Tag:Read permission
+  Try to create a tag - it should not be possible without Tag:Read permission
+  Try to edit a tag - it should not be possible without Tag:Read permission
+  Try to delete a tag - it should not be possible without Tag:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | write  |
+      | tag    | read   |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When Tag with name "Tag1" is searched
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Read + Tag:Delete permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Read and Tag:Delete permission to user0
+  Login as user0 and try to query tags - no exception should be thrown
+  Try to create a tag - it should not be possible without Tag:Write permission
+  Try to edit a tag - it should not be possible without Tag:Write permission
+  Try to delete a tag - no exception should be thrown
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | read   |
+      | tag    | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When Tag with name "Tag1" is searched
+    Then I find a tag with name "Tag1"
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    When I delete tag with name "Tag2"
+    When Tag with name "Tag2" is searched
+    Then No tag was found
+    Then I logout
+
+  Scenario: Adding Tag:Read + Tag:Delete permission to user and revoke Tag:Delete in same scope
+  Login as kapua-sys
+  Create a few sample Tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Read and Tag:Delete permission to user0
+  Revoke Tag:Delete from user0
+  Login as user0 and try to query Tags - no exception should be thrown
+  Try to create a tag - it should not be possible without Tag:Write permission
+  Try to edit a tag - it should not be possible without Tag:Write permission
+  Try to delete a tag - it should not be possible without Tag:Delete permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | read   |
+      | tag    | delete |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When Tag with name "Tag1" is searched
+    Then I find a tag with name "Tag1"
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:delete:1:*"
+    When I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Read + Tag:Delete permission to user and revoke Tag:Read in same scope
+  Login as kapua-sys
+  Create a few sample Tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Read and Tag:Delete permission to user0
+  Revoke Tag:Read from user0
+  Login as user0 and try to query Tags - it should not be possible without Tag:Read permission
+  Try to create a tag - it should not be possible without Tag:Read permission
+  Try to edit a tag - it should not be possible without Tag:Read permission
+  Try to delete a tag - it should not be possible without Tag:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | delete |
+      | tag    | read   |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When Tag with name "Tag1" is searched
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:write:1:*"
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Write + Tag:Delete permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Write and Tag:Delete permission to user0
+  Login as user0 and try to query tags - it should not be possible without Tag:Read permission
+  Try to create a tag - it should not be possible without Tag:Read permission
+  Try to edit a tag - it should not be possible without Tag:Read permission
+  Try to delete a tag - it should not be possible without Tag:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | write  |
+      | tag    | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When Tag with name "Tag1" is searched
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Write + Tag:Delete permission to user and revoke Tag:Delete in same scope
+  Login as kapua-sys
+  Create a few sample Tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Write and Tag:Delete permission to user0
+  Revoke Tag:Delete from user0
+  Login as user0 and try to query Tags - it should not be possible without Tag:Read permission
+  Try to create a tag - it should not be possible without Tag:Read permission
+  Try to edit a tag - it should not be possible without Tag:Read permission
+  Try to delete a tag - it should not be possible without Tag:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | write  |
+      | tag    | delete |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When Tag with name "Tag1" is searched
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:Write + Tag:Delete permission to user and revoke Tag:Write in same scope
+  Login as kapua-sys
+  Create a few sample Tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Tag:Write and Tag:Delete permission to user0
+  Revoke Tag:Write from user0
+  Login as user0 and try to query Tags - it should not be possible without Tag:Read permission
+  Try to create a tag - it should not be possible without Tag:Read permission
+  Try to edit a tag - it should not be possible without Tag:Read permission
+  Try to delete a tag - it should not be possible without Tag:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | write  |
+      | tag    | read   |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When Tag with name "Tag1" is searched
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I change tag name from "Tag1" to "Tag111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: tag:read:1:*"
+    When I delete tag with name "Tag2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding Tag:All permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample tags
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Account:ALL permission to user0
+  Login as user0 and try to query tags - no exception should be thrown
+  Try to create a tag - no exception should be thrown
+  Try to edit a tag - no exception should be thrown
+  Try to delete a tag - no exception should be thrown
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user0 | Kapua User 1 | user1@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And I create a tag with name "Tag1" and description "Tag numero uno"
+    And I create a tag with name "Tag2" and description "Tag numero due"
+    And Add permissions to the last created user
+      | domain | action |
+      | tag    | read   |
+      | tag    | write  |
+      | tag    | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When Tag with name "Tag1" is searched
+    Then I find a tag with name "Tag1"
+    Then No exception was thrown
+    When I create a tag with name "Tag3" and description "Tag numero tre"
+    Then No exception was thrown
+    When I change tag name from "Tag1" to "Tag111"
+    Then No exception was thrown
+    When I delete tag with name "Tag2"
+    Then No exception was thrown
+    When Tag with name "Tag2" is searched
+    Then No tag was found
+    Then I logout
+
+    # User
+  Scenario: Adding User:Read permission to user in same scope
+  Login as kapua-sys.
+  Create a few users.
+  Create a sample user in kapua-sys account (e.g. User0).
+  Add User:Read permission to user0.
+  Login as user0 and query users - no exception should be thrown.
+  Try to create a user - it should not be possible without user:Write permission.
+  Try to edit a user - it should not be possible without user:Write permission.
+  Try to delete a user - it should not be possible without user:Write permission.
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | read   |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I search for user with name "user1"
+    Then I find user
+      | name  |
+      | user1 |
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:write:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    When I search for user with name "user1"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:write:1:*"
+    When I try to edit user to name "user111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:delete:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Revoking User:Read permission from user in same scope
+  Login as kapua-sys
+  Create a few Users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add User:Read permission to user0
+  Revoke User:Read permission to user0
+  Login as user0 and query Users - it should not be possible without User:Read permission
+  Try to create a User - it should not be possible without User:Read permission
+  Try to edit a User - it should not be possible without User:Read permission
+  Try to delete a User - it should not be possible without User:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | read   |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Write permission to user in same scope
+  Login as kapua-sys
+  Create a few sample user
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add user:Write permission to user0
+  Login as user0 and try to query users, it should not be possible without user:Read permission
+  Try to create a user - it should not be possible without user:Read permission
+  Try to edit a user - it should not be possible without user:Read permission
+  Try to delete user - it should not be possible without user:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | write  |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "NullPointerException" with the text "*"
+    When I try to edit user to name "user111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Revoking User:Write permission from user in same scope
+  Login as kapua-sys
+  Create a few Users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add User:Write permission to user0
+  Revoke User:Write permission from user0
+  Login as user0 and query Users - it should not be possible without User:Read permission
+  Try to create a User - it should not be possible without User:Read permission
+  Try to edit a User - it should not be possible without User:Read permission
+  Try to delete a User - it should not be possible without User:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | write  |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Delete permission to user in same scope
+  Login as kapua-sys
+  Create a few sample users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add user:Delete permission to user0
+  Login as user0 and try to query users, it should not be possible without user:Read permission
+  Try to create a user - it should not be possible without user:Read permission
+  Try to edit a user - it should not be possible without user:Read and user:Read permissions
+  Try to delete a user - it should not be possible without user:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "NullPointerException" with the text "*"
+    When I try to edit user to name "user111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Revoking User:Delete permission from user in same scope
+  Login as kapua-sys
+  Create a few Users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add User:Delete permission to user0
+  Revoke User:Delete permission to user0
+  Login as user0 and query Users - it should not be possible without User:Read permission
+  Try to create a User - it should not be possible without User:Read permission
+  Try to edit a User - it should not be possible without User:Read permission
+  Try to delete a User - it should not be possible without User:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | delete |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Read + User:Write permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add User:Read and User:Write permission to user0
+  Login as user0 and try to query users - no exception should be thrown
+  Try to create a user - no exception should be thrown
+  Try to edit a user - no exception should be thrown
+  Try to delete a user - it should not be possible without user:Delete permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | read   |
+      | user   | write  |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I search for user with name "user2"
+    Then No exception was thrown
+    When I create user with name "user3"
+    Then No exception was thrown
+    When I search for user with name "user1"
+    When I try to edit user to name "user111"
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:delete:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Read + User:Write permission to user and revoke User:Write in same scope
+  Login as kapua-sys
+  Create a few sample Users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add User:Read and User:Write permission to user0
+  Revoke User:Write from user0
+  Login as user0 and try to query Users - no exception should be thrown
+  Try to create a User - it should not be possible without User:Write permission
+  Try to edit a User - it should not be possible without User:Write permission
+  Try to delete a User - it should not be possible without User:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | read   |
+      | user   | write  |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I search for user with name "user2"
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:write:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    When I search for user with name "user1"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:write:1:*"
+    When I try to edit user to name "user111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:delete:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Read + User:Write permission to user and revoke User:Read in same scope
+  Login as kapua-sys
+  Create a few sample Users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add User:Read and User:Write permission to user0
+  Revoke User:Write from user0
+  Login as user0 and try to query Users - no exception should be thrown
+  Try to create a User - it should not be possible without User:Write permission
+  Try to edit a User - it should not be possible without User:Write permission
+  Try to delete a User - it should not be possible without User:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | write  |
+      | user   | read   |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user2"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Read + User:Delete permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add user:Read and user:Delete permission to user0
+  Login as user0 and try to query users - no exception should be thrown
+  Try to create a user - it should not be possible without user:Write permission
+  Try to edit a user - it should not be possible without user:Write permission
+  Try to delete a user - no exception should be thrown
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | read   |
+      | user   | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I search for user with name "user2"
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:write:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    When I search for user with name "user1"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:write:1:*"
+    When I try to edit user to name "user111"
+    Then An exception was thrown
+    Then I try to delete user "user2"
+    Then No exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Read + User:Delete permission to user and revoke User:Delete in same scope
+  Login as kapua-sys
+  Create a few sample Users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add User:Read and User:Delete permission to user0
+  Revoke User:Delete from user0
+  Login as user0 and try to query Users - no exception should be thrown
+  Try to create a User - it should not be possible without User:Write permission
+  Try to edit a User - it should not be possible without User:Write permission
+  Try to delete a User - it should not be possible without User:Delete permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | read   |
+      | user   | delete |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I search for user with name "user2"
+    Then No exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:write:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    When I search for user with name "user1"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:write:1:*"
+    When I try to edit user to name "user111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:delete:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Read + User:Delete permission to user and revoke User:Read in same scope
+  Login as kapua-sys
+  Create a few sample Users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add User:Read and User:Delete permission to user0
+  Revoke User:Read from user0
+  Login as user0 and try to query Users - it should not be possible without User:Read permission
+  Try to create a User - it should not be possible without User:Read permission
+  Try to edit a User - it should not be possible without User:Read permission
+  Try to delete a User - it should not be possible without User:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | delete |
+      | user   | read   |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user2"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Write + User:Delete permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add user:Write and user:Delete permission to user0
+  Login as user0 and try to query users - it should not be possible without user:Read permission
+  Try to create a user - it should not be possible without user:Read permission
+  Try to edit a user - it should not be possible without user:Read permission
+  Try to delete a user - it should not be possible without user:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | delete |
+      | user   | write  |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "NullPointerException" with the text "*"
+    When I try to edit user to name "user111"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Write + User:Delete permission to user and revoke User:Delete in same scope
+  Login as kapua-sys
+  Create a few sample Users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add User:Write and User:Delete permission to user0
+  Revoke User:Delete from user0
+  Login as user0 and try to query Users - it should not be possible without User:Read permission
+  Try to create a User - it should not be possible without User:Read permission
+  Try to edit a User - it should not be possible without User:Read permission
+  Try to delete a User - it should not be possible without User:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | write  |
+      | user   | delete |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user2"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:Write + User:Delete permission to user and revoke User:Write in same scope
+  Login as kapua-sys
+  Create a few sample Users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add User:Write and User:Delete permission to user0
+  Revoke User:Write from user0
+  Login as user0 and try to query Users - it should not be possible without User:Read permission
+  Try to create a User - it should not be possible without User:Read permission
+  Try to edit a User - it should not be possible without User:Read permission
+  Try to delete a User - it should not be possible without User:Read permission
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | delete |
+      | user   | write  |
+    Then I query for the last permission added to the new User
+    And I delete the last permission added to the new User
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user2"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I create user with name "user3"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    When I search for user with name "user1"
+    Then An exception was thrown
+    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
+    Then I try to delete user "user2"
+    Then An exception was thrown
+    Then I logout
+
+  Scenario: Adding User:All permissions to user in same scope
+  Login as kapua-sys
+  Create a few sample users
+  Create a sample user in kapua-sys account (e.g. User0)
+  Add Account:ALL permission to user0
+  Login as user0 and try to query users - no exception should be thrown
+  Try to create a user - no exception should be thrown
+  Try to edit a user - no exception should be thrown
+  Try to delete a user - no exception should be thrown
+
+    Given I login as user with name "kapua-sys" and password "kapua-password"
+    And Scope with ID 1
+    And I select account "kapua-sys"
+    And A generic user
+      | name  | displayName  | email           | phoneNumber     | status  | userType |
+      | user1 | Kapua User 1 | user1@kapua.com | +386 31 321 122 | ENABLED | INTERNAL |
+      | user2 | Kapua User 2 | user2@kapua.com | +386 31 321 123 | ENABLED | INTERNAL |
+      | user0 | Kapua User 0 | user0@kapua.com | +386 31 321 121 | ENABLED | INTERNAL |
+    And I add credentials
+      | name  | password          | enabled |
+      | user2 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user1 | ToManySecrets123# | true    |
+    And I add credentials
+      | name  | password          | enabled |
+      | user0 | ToManySecrets123# | true    |
+    And Add permissions to the last created user
+      | domain | action |
+      | user   | read   |
+      | user   | write  |
+      | user   | delete |
+    Then I logout
+    And I login as user with name "user0" and password "ToManySecrets123#"
+    When I search for user with name "user2"
+    Then No exception was thrown
+    When I create user with name "user3"
+    Then No exception was thrown
+    When I search for user with name "user1"
+    When I try to edit user to name "user111"
+    Then No exception was thrown
+    Then I try to delete user "user2"
+    Then No exception was thrown
+    Then I logout

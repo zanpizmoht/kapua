@@ -104,7 +104,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-// Implementation of Gherkin steps used to test miscellaneous Shiro 
+// Implementation of Gherkin steps used to test miscellaneous Shiro
 // authorization functionality.
 
 @ScenarioScoped
@@ -339,6 +339,39 @@ public class AuthorizationServiceSteps extends TestBase {
         }
     }
 
+    @When("^I update role \"(.+)\" to name \"(.+)\"$")
+    public void updateRoleToName(String oldName, String newName)
+            throws Exception {
+
+        RoleQuery tmpQuery = roleFactory.newQuery(getCurrentScopeId());
+        tmpQuery.setPredicate(tmpQuery.attributePredicate(RoleAttributes.NAME, oldName, AttributePredicate.Operator.EQUAL));
+
+        try {
+            primeException();
+            Role role = roleService.query(tmpQuery).getFirstItem();
+            role.setName(newName);
+            roleService.update(role);
+        } catch (KapuaException ex) {
+            verifyException(ex);
+        }
+    }
+
+    @When("^I delete the role \"(.+)\"$")
+    public void iDeleteTheRole(String roleName)
+            throws Exception {
+
+        RoleQuery tmpQuery = roleFactory.newQuery(getCurrentScopeId());
+        tmpQuery.setPredicate(tmpQuery.attributePredicate(RoleAttributes.NAME, roleName, AttributePredicate.Operator.EQUAL));
+
+        try {
+            primeException();
+            Role role = roleService.query(tmpQuery).getFirstItem();
+            roleService.delete(getCurrentScopeId(), role.getId());
+        } catch (KapuaException ex) {
+            verifyException(ex);
+        }
+    }
+
     @When("^I examine the permissions for the last role$")
     public void findPermissionsForTheLastCreatedRole()
             throws Exception {
@@ -491,6 +524,22 @@ public class AuthorizationServiceSteps extends TestBase {
             stepData.put("Count", Long.valueOf(roleList.getSize()));
         } catch (KapuaException ex) {
             verifyException(ex);
+        }
+    }
+
+    @When("^I query for the roles$")
+    public void queryForRoles()
+            throws Exception {
+
+        Account account = (Account) stepData.get("LastAccount");
+
+        try {
+            RoleQuery tmpQuery = roleFactory.newQuery(account.getId());
+            RoleListResult roleListResult = roleService.query(tmpQuery);
+            stepData.put("RoleList", roleListResult);
+
+        } catch (Exception e) {
+            verifyException(e);
         }
     }
 
