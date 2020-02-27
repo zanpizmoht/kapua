@@ -164,17 +164,6 @@ public class TagServiceSteps extends TestBase {
         } catch (KapuaException ke) {
             verifyException(ke);
         }
-
-        try {
-            TagQuery query = tagFactory.newQuery(SYS_SCOPE_ID);
-            query.setPredicate(query.attributePredicate(TagAttributes.NAME, tagName, AttributePredicate.Operator.EQUAL));
-            TagListResult queryResult = tagService.query(query);
-            Tag foundTag = queryResult.getFirstItem();
-            stepData.put("tag", foundTag);
-            stepData.put("queryResult", queryResult);
-        } catch (Exception e) {
-            verifyException(e);
-        }
     }
 
     @When("^I delete tag with name \"([^\"]*)\"$")

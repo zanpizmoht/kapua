@@ -683,26 +683,6 @@ public class AccountServiceSteps extends TestBase {
         }
     }
 
-    @Then("^Create child account of \"(.*)\" named \"(.*)\"$")
-    public void createChildAccountOfAccount(String name, String nameOfCreation)
-            throws Exception {
-
-        try {
-            Account tmpAcc = accountService.findByName(name);
-
-            AccountCreator creator = accountFactory.newCreator(tmpAcc.getId(), nameOfCreation);
-            creator.setOrganizationName("comtrade");
-            creator.setOrganizationEmail(String.format("%s@comtrade.com", nameOfCreation));
-
-            Account newAcc = accountService.create(creator);
-
-            stepData.put("LastAccount", newAcc);
-        } catch (Exception e) {
-            verifyException(e);
-        }
-
-    }
-
     @Then("^The account does not exist$")
     public void tryToFindInexistentAccount() {
 

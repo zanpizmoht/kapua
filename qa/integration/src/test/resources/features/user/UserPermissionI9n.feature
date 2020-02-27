@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2020 Eurotech and/or its affiliates and others
+# Copyright (c) 2019, 2020 Eurotech and/or its affiliates and others
 #
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v1.0
@@ -872,7 +872,7 @@ Feature: User Permission tests
   Login as user0 and query roles - no exception should be thrown.
   Try to create a role - it should not be possible without Role:Write permission.
   Try to edit a role - it should not be possible without Role:Write permission.
-  Try to delete a role - it should not be possible without Role:Write permission.
+  Try to delete a role - it should not be possible without Role:Delete permission.
 
     Given I login as user with name "kapua-sys" and password "kapua-password"
     And Scope with ID 1
@@ -1459,7 +1459,7 @@ Feature: User Permission tests
     Then An exception was thrown
     Then I logout
 
-  Scenario: Adding Role:Read + Role:Delete permission to user and revoking Role:Delete in same scope
+  Scenario: Adding Role:Read + Role:Delete permission to user and revoking Role:Read in same scope
   Login as kapua-sys
   Create a few sample roles
   Create a sample user in kapua-sys account (e.g. User0)
@@ -1552,7 +1552,7 @@ Feature: User Permission tests
     Then An exception was thrown
     Then I logout
 
-  Scenario: Adding Role:Write + Role:Delete permission to user and revoking Role:Delete in same scope
+  Scenario: Adding Role:Write + Role:Delete permission to user and revoking Role:Write in same scope
   Login as kapua-sys
   Create a few sample roles
   Create a sample user in kapua-sys account (e.g. User0)
@@ -2475,9 +2475,6 @@ Feature: User Permission tests
     When I create user with name "user3"
     Then An exception was thrown
     Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
-    When I search for user with name "user1"
-    Then An exception was thrown
-    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
     Then I try to delete user "user2"
     Then An exception was thrown
     Then I logout
@@ -2573,9 +2570,6 @@ Feature: User Permission tests
     When I create user with name "user3"
     Then An exception was thrown
     Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
-    When I search for user with name "user1"
-    Then An exception was thrown
-    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
     Then I try to delete user "user2"
     Then An exception was thrown
     Then I logout
@@ -2617,12 +2611,6 @@ Feature: User Permission tests
     Then An exception was thrown
     Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
     When I create user with name "user3"
-    Then An exception was thrown
-    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
-    When I search for user with name "user1"
-    Then An exception was thrown
-    Given I expect the exception "NullPointerException" with the text "*"
-    When I try to edit user to name "user111"
     Then An exception was thrown
     Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
     Then I try to delete user "user2"
@@ -2669,9 +2657,6 @@ Feature: User Permission tests
     Then An exception was thrown
     Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
     When I create user with name "user3"
-    Then An exception was thrown
-    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
-    When I search for user with name "user1"
     Then An exception was thrown
     Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
     Then I try to delete user "user2"
@@ -2778,8 +2763,8 @@ Feature: User Permission tests
   Create a few sample Users
   Create a sample user in kapua-sys account (e.g. User0)
   Add User:Read and User:Write permission to user0
-  Revoke User:Write from user0
-  Login as user0 and try to query Users - no exception should be thrown
+  Revoke User:Read from user0
+  Login as user0 and query Users - it should not be possible without User:Read permission
   Try to create a User - it should not be possible without User:Write permission
   Try to edit a User - it should not be possible without User:Write permission
   Try to delete a User - it should not be possible without User:Read permission
@@ -3009,12 +2994,6 @@ Feature: User Permission tests
     When I create user with name "user3"
     Then An exception was thrown
     Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
-    When I search for user with name "user1"
-    Then An exception was thrown
-    Given I expect the exception "NullPointerException" with the text "*"
-    When I try to edit user to name "user111"
-    Then An exception was thrown
-    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
     Then I try to delete user "user2"
     Then An exception was thrown
     Then I logout
@@ -3062,9 +3041,6 @@ Feature: User Permission tests
     When I create user with name "user3"
     Then An exception was thrown
     Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
-    When I search for user with name "user1"
-    Then An exception was thrown
-    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
     Then I try to delete user "user2"
     Then An exception was thrown
     Then I logout
@@ -3110,9 +3086,6 @@ Feature: User Permission tests
     Then An exception was thrown
     Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
     When I create user with name "user3"
-    Then An exception was thrown
-    Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
-    When I search for user with name "user1"
     Then An exception was thrown
     Given I expect the exception "SubjectUnauthorizedException" with the text "Missing permission: user:read:1:*"
     Then I try to delete user "user2"
