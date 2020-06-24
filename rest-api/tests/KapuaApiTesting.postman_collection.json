@@ -1,0 +1,131 @@
+{
+	"info": {
+		"_postman_id": "265f24f9-6fb1-4a42-9a73-a8936a841657",
+		"name": "Kapua API testing",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Correct username and password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "ee2d3479-38c4-40db-9138-5b1dd5547c8c",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Body matches string\", function () {\r",
+									"    pm.expect(pm.response.text()).to.include(\"type\");\r",
+									"    pm.expect(pm.response.text()).to.include(\"id\");\r",
+									"    pm.expect(pm.response.text()).to.include(\"scopeId\");\r",
+									"    pm.expect(pm.response.text()).to.include(\"createdOn\");\r",
+									"    pm.expect(pm.response.text()).to.include(\"createdBy\");\r",
+									"    pm.expect(pm.response.text()).to.include(\"modifiedOn\");\r",
+									"    pm.expect(pm.response.text()).to.include(\"modifiedBy\");\r",
+									"    pm.expect(pm.response.text()).to.include(\"optlock\");\r",
+									"    pm.expect(pm.response.text()).to.include(\"tokenId\");\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"username\": \"kapua-sys\",\r\n  \"password\": \"kapua-password\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8081/v1/authentication/user",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8081",
+							"path": [
+								"v1",
+								"authentication",
+								"user"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Correct username wrong password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "0464aa5e-d47f-4b24-9ec2-4e974becd89f",
+								"exec": [
+									"pm.test(\"Status code is 401\", function () {\r",
+									"    pm.response.to.have.status(401);\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Body matches string\", function () {\r",
+									"    pm.expect(pm.response.text()).to.include(\"Error 401: Unauthorized\");\r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"username\": \"kapua-sys\",\r\n  \"password\": \"wrong-password\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8081/v1/authentication/user",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8081",
+							"path": [
+								"v1",
+								"authentication",
+								"user"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"protocolProfileBehavior": {}
+		},
+		{
+			"name": "Tags",
+			"item": [],
+			"protocolProfileBehavior": {}
+		}
+	],
+	"protocolProfileBehavior": {}
+}

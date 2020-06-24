@@ -5,7 +5,7 @@ services:
     image: kapua/kapua-sql:${IMAGE_VERSION}
     ports:
       - 8181:8181
-      - 3306:3306
+      - 3307:3307
   es:
     image: elasticsearch:5.4.0
     ports:

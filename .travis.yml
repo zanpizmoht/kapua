@@ -37,6 +37,20 @@ jobs:
     script:
     - $M2_HOME/bin/mvn -v
     - $M2_HOME/bin/mvn -B ${BUILD_OPTS} -DskipTests clean install
+  - stage: api-test
+    language: node_js
+    node_js: "12.0"
+    install:
+      - npm install newman
+    before_script:
+      - ./deployment/docker/unix/docker-deploy.sh
+      - node --version
+      - npm --version
+      - node_modules/.bin/newman --version
+    script:
+      - node_modules/.bin/newman run rest-api/tests/KapuaApiTesting.postman_collection.json
+    after_script:
+      - ./deployment/docker/unix/docker-undeploy.sh
   - stage: test
     script:
     - ./travis.sh $M2_HOME/bin/mvn -B ${BUILD_OPTS} ${CONFIG_OVERRIDES} -Dgroups='!org.eclipse.kapua.qa.markers.junit.JUnitTests' -Dcucumber.options="--tags @brokerAcl" verify
